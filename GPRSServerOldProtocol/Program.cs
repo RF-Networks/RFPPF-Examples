@@ -94,7 +94,7 @@ namespace GPRSServerOldProtocol
         {
             // Message was successfully parsed
             GPRSMessage receivedGPRSMessage = (e.Message as GPRSMessage);
-            // Because GPRS protocol requires aknowledgements. Send acknowledge message.
+            // Because GPRS protocol requires acknowledgments. Send acknowledge message.
             GPRSMessage ack = GPRSMessage.GenerateGPRSAcknowledgeMessage(receivedGPRSMessage.MessageNumber);
             ((sender as GPRSParser).Info as IScsServerClient).SendMessage(new ScsRawDataMessage(ack.Bytes));
 
