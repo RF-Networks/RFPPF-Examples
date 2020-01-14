@@ -1,3 +1,5 @@
+[![Maven Central](https://img.shields.io/maven-central/v/org.bitbucket.rfnetwork/rfppf.svg?label=Maven%20Central)](https://search.maven.org/search?q=g:%22org.bitbucket.rfnetwork%22%20AND%20a:%22rfppf%22)
+
 # GPRSServerOldProtocol
 This example is a basic server example that handles RF-Networks Ltd. GPRS gateway devices connections and data processing.
 
