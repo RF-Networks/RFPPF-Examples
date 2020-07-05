@@ -113,8 +113,60 @@ namespace GPRSServerOldProtocol
                     //{
                     //    // Temperature message
                     //    TagTemperatureMessage tempMsg = tm as TagTemperatureMessage;
-                    //    Console.WriteLine(string.Format("Tag ID {0}, Temperature: {1:0.00}", tempMsg.TagID, tempMsg.Temperature);
+                    //    Console.WriteLine(string.Format("Tag ID {0}, Temperature: {1:0.00}", tempMsg.TagID, tempMsg.Temperature));
                     //}
+                    //else if (tm.GetType() == typeof(TagPeriodicMessage))
+                    //{
+                    //    // Periodic message
+                    //    TagPeriodicMessage periodicMsg = tm as TagPeriodicMessage;
+
+                    //    Console.WriteLine(string.Format("Tag ID {0}, Voltage: {1:0.00}", periodicMsg.TagID, periodicMsg.Voltage));
+                    //}
+                    //else if (tm.GetType() == typeof(TagCounterMessage))
+                    //{
+                    //    // Conuter
+                    //    TagCounterMessage counterMsg = tm as TagCounterMessage;
+                    //    Console.WriteLine(string.Format("Tag ID {0}, Counter: {1}, Voltage: {2:0.00}", counterMsg.TagID, counterMsg.Counter, counterMsg.Voltage));
+                    //}
+                    //else if (tm.GetType() == typeof(TagActivateMessage))
+                    //{
+                    //    // Activate message
+                    //    TagActivateMessage activateMsg = tm as TagActivateMessage;
+
+                    //    Console.WriteLine(string.Format("Tag ID {0}, Activator: {1}", activateMsg.TagID, activateMsg.Activator));
+                    //}
+                    //else if (tm.GetType() == typeof(TagPressureMessage))
+                    //{
+                    //    // Pressure message
+                    //    TagPressureMessage pressureMsg = tm as TagPressureMessage;
+
+                    //    Console.WriteLine(string.Format("Tag ID {0}, Pressure: {1:0.00}, Humidity: {2:0.00}, Temperature: {3:0.00}", pressureMsg.TagID, pressureMsg.Pressure, pressureMsg.Humidity, pressureMsg.Temperature));
+                    //}
+                    //else if (tm.GetType() == typeof(TagTemperatureRHMessage))
+                    //{
+                    //    // Temperature RH message
+                    //    TagTemperatureRHMessage temperatureRHMsg = tm as TagTemperatureRHMessage;
+
+                    //    Console.WriteLine(string.Format("Tag ID {0}, Temperature: {1:0.00}, Humidity: {2:0.00}, Voltage: {3:0.00}", temperatureRHMsg.TagID, temperatureRHMsg.Temperature, temperatureRHMsg.Humidity, temperatureRHMsg.Voltage));
+                    //}
+
+                    //// Additional messages. Use as shown before
+                    //// TagPushButtonGPIO9Message
+                    //// TagAngleCalibrationMessage
+                    //// TagAgroMessage
+                    //// TagMovementMessage
+                    //// TagAngleCalibrationRecalibrationMessage
+                    //// TagMovementAverageMessage
+                    //// TagPushButtonGPIO8Message
+                    //// TagDistanceMessage
+                    //// TagAnalogMessage
+                    //// TagNoMovementMessage
+                    //// TagAnalogCounterMessage
+                    //// TagAngleMessage
+                    //// TagIButtonMessage
+                    //// TagMagnetDetectionGPIO8Message
+                    //// TagProductionMessage
+
 
                     // Print message details by using ToString() method
                     Console.WriteLine(tm.ToString());
