@@ -142,6 +142,54 @@ public class GPRSServerOldProtocol extends ObservableServer implements IParser {
 //	            			TagTemperatureMessage tempMsg = (TagTemperatureMessage)tm;
 //	            			System.out.println(String.format("Tag ID %d, Temperature: %.2f C", tempMsg.getTagID(), tempMsg.getTemperature()));
 //	            		}
+//	            		else if (tm instanceof TagPeriodicMessage)
+//	            		{
+//	            			// Periodic message
+//	            			TagPeriodicMessage periodicMsg = (TagPeriodicMessage)tm;
+//	            			
+//	            			System.out.println(String.format("Tag ID %d, Voltage: %.2f V", periodicMsg.getTagID(), periodicMsg.getVoltage()));
+//	            		}
+//	            		else if (tm instanceof TagCounterMessage)
+//	            		{
+//	            			// Counter
+//	            			TagCounterMessage counterMsg = (TagCounterMessage)tm;
+//	            			System.out.println(String.format("Tag ID %d, Counter: %d, Voltage: %.2f V", counterMsg.getTagID(), counterMsg.getCounter(), counterMsg.getVoltage()));
+//	            		}
+//	            		else if (tm instanceof TagActivateMessage)
+//	            		{
+//	            			// Activate message
+//	            			TagActivateMessage activateMsg = (TagActivateMessage)tm;
+//	            			System.out.println(String.format("Tag ID %d, Activator: %d", activateMsg.getTagID(), activateMsg.getActivator()));
+//		            	}
+//	            		else if (tm instanceof TagPressureMessage)
+//	            		{
+//	            			// Pressure message
+//	            			TagPressureMessage pressureMsg = (TagPressureMessage)tm;
+//	            			System.out.println(String.format("Tag ID %d, Pressure: %.2f, Humidity: %.2f, Temperature: %.2f", pressureMsg.getTagID(), pressureMsg.getPressure(), pressureMsg.getHumidity(), pressureMsg.getTemperature()));
+//			            }
+//	            		else if (tm instanceof TagTemperatureRHMessage)
+//	            		{
+//	            			// Temperature RH message
+//	            			TagTemperatureRHMessage temperatureRHMsg = (TagTemperatureRHMessage)tm;
+//	            			System.out.println(String.format("Tag ID %d, Temperature: %.2f, Humidity: %.2f, Voltage: %.2f", temperatureRHMsg.getTagID(), temperatureRHMsg.getTemperature(), temperatureRHMsg.getHumidity(), temperatureRHMsg.getVoltage()));
+//	   			        }
+	            		
+	            		//// Additional messages. Use as shown before
+	                    //// TagPushButtonGPIO9Message
+	                    //// TagAngleCalibrationMessage
+	                    //// TagAgroMessage
+	                    //// TagMovementMessage
+	                    //// TagAngleCalibrationRecalibrationMessage
+	                    //// TagMovementAverageMessage
+	                    //// TagPushButtonGPIO8Message
+	                    //// TagDistanceMessage
+	                    //// TagAnalogMessage
+	                    //// TagNoMovementMessage
+	                    //// TagAnalogCounterMessage
+	                    //// TagAngleMessage
+	                    //// TagIButtonMessage
+	                    //// TagMagnetDetectionGPIO8Message
+	                    //// TagProductionMessage
 	            		// Print message details by using ToString() method
 	            		System.out.println(tm.toString());
 	            	}
@@ -158,6 +206,55 @@ public class GPRSServerOldProtocol extends ObservableServer implements IParser {
 	            	} else {
 	            		System.out.println(RFPPFHelper.ByteArrayToHexString(((ReceiverTransientMessage)rcvMessage).getTransientData()));
 	            	}
+	            } else if (rcvMessage.getMessageType() == ReceiverMessage.MessageTypes.PowerAlert) {
+	            	// Receiver power alert. Is sent from the gateway when external power is connected or disconnected
+	                // Note: Available only on gateways with the inner battery
+	                ReceiverPowerAlertMessage pam = (ReceiverPowerAlertMessage)rcvMessage;
+	                System.out.println(String.format("Gateway (IMEI: %d) External power %s", receivedGPRSMessage.getMainReceiverID(), pam.getExternalPowerConnected() ? "connected" : "disconnected"));		
+	            } else if (rcvMessage.getMessageType() == ReceiverMessage.MessageTypes.ModemVoltage) {
+	            	// Modem voltage. Actually sends voltage mesured inside GPRS modem module
+	                ReceiverModemVoltageMessage mv = (ReceiverModemVoltageMessage)rcvMessage;
+	                System.out.println(String.format("Gateway (IMEI: %d) Modem voltage message: %s", receivedGPRSMessage.getMainReceiverID(), mv.toString()));		
+	            } else if (rcvMessage.getMessageType() == ReceiverMessage.MessageTypes.ReceiverMessage) {
+	            	// Receiver configuration message.
+	                ReceiverConfigurationMessage rcm = (ReceiverConfigurationMessage)rcvMessage;
+	                
+	                // To get voltage inside radio module try to cast receiver message to ReceiverConfigurationVoltageMessage.
+	                // In case of success, you can get voltage.
+	                try
+	                {
+	                	ReceiverConfigurationVoltageMessage cvm = (ReceiverConfigurationVoltageMessage)rcvMessage;
+	                	System.out.println(String.format("Gateway (IMEI: %d) Radio module voltage message: %s", receivedGPRSMessage.getMainReceiverID(), cvm.toString()));		
+	                }
+	                catch (ClassCastException ex)
+	                {
+	                	
+	                }
+	                
+	                // To get external voltage from analog connector on power plug of the gateway,
+	                // try to cast receiver message to ReceiverConfigurationExternalVoltageMessage.
+	                // In case of success, you can get voltage.
+	                try
+	                {
+	                	ReceiverConfigurationExternalVoltageMessage cevm = (ReceiverConfigurationExternalVoltageMessage)rcvMessage;
+	                	System.out.println(String.format("Gateway (IMEI: %d) External voltage message: %s", receivedGPRSMessage.getMainReceiverID(), cevm.toString()));		
+	                }
+	                catch (ClassCastException ex)
+	                {
+	                	
+	                }
+	                
+	                // To get temperature inside radio module try to cast receiver message to ReceiverConfigurationVoltageMessage.
+	                // In case of success, you can get temperature.
+	                try
+	                {
+	                	ReceiverConfigurationTemperatureMessage ctm = (ReceiverConfigurationTemperatureMessage)rcvMessage;
+	                	System.out.println(String.format("Gateway (IMEI: %d) Radio module temperature message: %s", receivedGPRSMessage.getMainReceiverID(), ctm.toString()));		
+	                }
+	                catch (ClassCastException ex)
+	                {
+	                	
+	                }
 	            } else {
 	            	System.out.println(rcvMessage.toString());
 	            }

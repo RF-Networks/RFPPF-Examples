@@ -124,7 +124,7 @@ namespace GPRSServerOldProtocol
                     //}
                     //else if (tm.GetType() == typeof(TagCounterMessage))
                     //{
-                    //    // Conuter
+                    //    // Counter
                     //    TagCounterMessage counterMsg = tm as TagCounterMessage;
                     //    Console.WriteLine(string.Format("Tag ID {0}, Counter: {1}, Voltage: {2:0.00}", counterMsg.TagID, counterMsg.Counter, counterMsg.Voltage));
                     //}
@@ -185,6 +185,49 @@ namespace GPRSServerOldProtocol
                 }
                 else
                     Console.WriteLine(RFPPFHelper.ByteArrayToHexString((rcvMessage as ReceiverTransientMessage).TransientData));
+            }
+            else if (rcvMessage.MessageType == ReceiverMessage.MessageTypes.PowerAlert)
+            {
+                // Receiver power alert. Is sent from the gateway when external power is connected or disconnected
+                // Note: Available only on gateways with the inner battery
+                ReceiverPowerAlertMessage pam = rcvMessage as ReceiverPowerAlertMessage;
+                Console.WriteLine(string.Format("Gateway (IMEI: {0}) External power {1}", receivedGPRSMessage.MainReceiverID, pam.ExternalPowerConnected? "connected" : "disconnected"));
+            }
+            else if (rcvMessage.MessageType == ReceiverMessage.MessageTypes.ModemVoltage)
+            {
+                // Modem voltage. Actually sends voltage mesured inside GPRS modem module
+                ReceiverModemVoltageMessage mv = rcvMessage as ReceiverModemVoltageMessage;
+                Console.WriteLine(string.Format("Gateway (IMEI: {0}) Modem voltage message: {1}", receivedGPRSMessage.MainReceiverID, mv.ToString()));
+            }
+            else if (rcvMessage.MessageType == ReceiverMessage.MessageTypes.ReceiverMessage)
+            {
+                // Receiver configuration message.
+                ReceiverConfigurationMessage rcm = rcvMessage as ReceiverConfigurationMessage;
+
+                // To get voltage inside radio module try to cast receiver message to ReceiverConfigurationVoltageMessage.
+                // In case of success, you can get voltage.
+                ReceiverConfigurationVoltageMessage cvm = rcvMessage as ReceiverConfigurationVoltageMessage;
+                if (cvm != null)
+                {
+                    Console.WriteLine(string.Format("Gateway (IMEI: {0}) Radio module voltage message: {1}", receivedGPRSMessage.MainReceiverID, cvm.ToString()));
+                }
+
+                // To get external voltage from analog connector on power plug of the gateway,
+                // try to cast receiver message to ReceiverConfigurationExternalVoltageMessage.
+                // In case of success, you can get voltage.
+                ReceiverConfigurationExternalVoltageMessage cevm = rcvMessage as ReceiverConfigurationExternalVoltageMessage;
+                if (cevm != null)
+                {
+                    Console.WriteLine(string.Format("Gateway (IMEI: {0}) External voltage message: {1}", receivedGPRSMessage.MainReceiverID, cevm.ToString()));
+                }
+
+                // To get temperature inside radio module try to cast receiver message to ReceiverConfigurationVoltageMessage.
+                // In case of success, you can get temperature.
+                ReceiverConfigurationTemperatureMessage ctm = rcvMessage as ReceiverConfigurationTemperatureMessage;
+                if (ctm != null)
+                {
+                    Console.WriteLine(string.Format("Gateway (IMEI: {0}) Radio module temperature message: {1}", receivedGPRSMessage.MainReceiverID, ctm.ToString()));
+                }
             }
             else
             {
