@@ -204,30 +204,25 @@ namespace GPRSServerOldProtocol
                 // Receiver configuration message.
                 ReceiverConfigurationMessage rcm = rcvMessage as ReceiverConfigurationMessage;
 
-                // To get voltage inside radio module try to cast receiver message to ReceiverConfigurationVoltageMessage.
-                // In case of success, you can get voltage.
-                ReceiverConfigurationVoltageMessage cvm = rcvMessage as ReceiverConfigurationVoltageMessage;
-                if (cvm != null)
+                if (rcvMessage.GetType() == typeof(ReceiverConfigurationVoltageMessage))
                 {
+                    ReceiverConfigurationVoltageMessage cvm = rcvMessage as ReceiverConfigurationVoltageMessage;
                     Console.WriteLine(string.Format("Gateway (IMEI: {0}) Radio module voltage message: {1}", receivedGPRSMessage.MainReceiverID, cvm.ToString()));
                 }
-
-                // To get external voltage from analog connector on power plug of the gateway,
-                // try to cast receiver message to ReceiverConfigurationExternalVoltageMessage.
-                // In case of success, you can get voltage.
-                ReceiverConfigurationExternalVoltageMessage cevm = rcvMessage as ReceiverConfigurationExternalVoltageMessage;
-                if (cevm != null)
+                else if (rcvMessage.GetType() == typeof(ReceiverConfigurationExternalVoltageMessage))
                 {
+                    ReceiverConfigurationExternalVoltageMessage cevm = rcvMessage as ReceiverConfigurationExternalVoltageMessage;
                     Console.WriteLine(string.Format("Gateway (IMEI: {0}) External voltage message: {1}", receivedGPRSMessage.MainReceiverID, cevm.ToString()));
                 }
-
-                // To get temperature inside radio module try to cast receiver message to ReceiverConfigurationVoltageMessage.
-                // In case of success, you can get temperature.
-                ReceiverConfigurationTemperatureMessage ctm = rcvMessage as ReceiverConfigurationTemperatureMessage;
-                if (ctm != null)
+                else if (rcvMessage.GetType() == typeof(ReceiverConfigurationTemperatureMessage))
                 {
+                    ReceiverConfigurationTemperatureMessage ctm = rcvMessage as ReceiverConfigurationTemperatureMessage;
                     Console.WriteLine(string.Format("Gateway (IMEI: {0}) Radio module temperature message: {1}", receivedGPRSMessage.MainReceiverID, ctm.ToString()));
                 }
+                else
+                {
+                    Console.WriteLine(string.Format("Gateway (IMEI: {0}) Radio module configuration message: {1}", receivedGPRSMessage.MainReceiverID, rcm.ToString()));
+                }               
             }
             else
             {
@@ -280,7 +275,18 @@ namespace GPRSServerOldProtocol
             {
                 ClientInfo info = infos[client.ClientId];
                 if (info != null)
-                    info.parser.AppendBytes(message.MessageData);
+                {
+                    try
+                    {
+                        info.parser.AppendBytes(message.MessageData);
+                    }
+                    catch (Exception ex)
+                    {
+                        // Catch parsing error in order not to close connection to client
+                        Console.WriteLine(ex.ToString());
+                        Console.WriteLine(string.Format("Received message: {0}", RFPPFHelper.ByteArrayToHexString(message.MessageData)));
+                    }
+                }
             }
         }
     }

@@ -90,8 +90,15 @@ public class GPRSServerOldProtocol extends ObservableServer implements IParser {
 	protected synchronized void handleMessageFromClient(byte[] message,
 			ConnectionToClient client) {
 		ProtocolParser parser = (ProtocolParser) client.getInfo("Parser");
-		//System.out.println(String.format("Data received: %s", RFPPFHelper.ByteArrayToHexString(message, true)));
-		parser.AppendBytes(message);
+		try {
+			parser.AppendBytes(message);
+		}
+		catch (Exception ex)
+		{
+			// Catch parsing exception
+			System.out.println(String.format("Parsing exception: %s", ex.toString()));
+			System.out.println(String.format("Data received: %s", RFPPFHelper.ByteArrayToHexString(message, true)));
+		}
 	}
 	
 	public static void main(String[] argv) {
@@ -212,48 +219,31 @@ public class GPRSServerOldProtocol extends ObservableServer implements IParser {
 	                ReceiverPowerAlertMessage pam = (ReceiverPowerAlertMessage)rcvMessage;
 	                System.out.println(String.format("Gateway (IMEI: %d) External power %s", receivedGPRSMessage.getMainReceiverID(), pam.getExternalPowerConnected() ? "connected" : "disconnected"));		
 	            } else if (rcvMessage.getMessageType() == ReceiverMessage.MessageTypes.ModemVoltage) {
-	            	// Modem voltage. Actually sends voltage mesured inside GPRS modem module
+	            	// Modem voltage. Actually sends voltage measured inside GPRS modem module
 	                ReceiverModemVoltageMessage mv = (ReceiverModemVoltageMessage)rcvMessage;
 	                System.out.println(String.format("Gateway (IMEI: %d) Modem voltage message: %s", receivedGPRSMessage.getMainReceiverID(), mv.toString()));		
 	            } else if (rcvMessage.getMessageType() == ReceiverMessage.MessageTypes.ReceiverMessage) {
 	            	// Receiver configuration message.
+	            	
 	                ReceiverConfigurationMessage rcm = (ReceiverConfigurationMessage)rcvMessage;
-	                
-	                // To get voltage inside radio module try to cast receiver message to ReceiverConfigurationVoltageMessage.
-	                // In case of success, you can get voltage.
-	                try
+	                if (rcvMessage instanceof ReceiverConfigurationVoltageMessage)
 	                {
 	                	ReceiverConfigurationVoltageMessage cvm = (ReceiverConfigurationVoltageMessage)rcvMessage;
 	                	System.out.println(String.format("Gateway (IMEI: %d) Radio module voltage message: %s", receivedGPRSMessage.getMainReceiverID(), cvm.toString()));		
 	                }
-	                catch (ClassCastException ex)
-	                {
-	                	
-	                }
-	                
-	                // To get external voltage from analog connector on power plug of the gateway,
-	                // try to cast receiver message to ReceiverConfigurationExternalVoltageMessage.
-	                // In case of success, you can get voltage.
-	                try
+	                else if (rcvMessage instanceof ReceiverConfigurationExternalVoltageMessage)
 	                {
 	                	ReceiverConfigurationExternalVoltageMessage cevm = (ReceiverConfigurationExternalVoltageMessage)rcvMessage;
 	                	System.out.println(String.format("Gateway (IMEI: %d) External voltage message: %s", receivedGPRSMessage.getMainReceiverID(), cevm.toString()));		
 	                }
-	                catch (ClassCastException ex)
-	                {
-	                	
-	                }
-	                
-	                // To get temperature inside radio module try to cast receiver message to ReceiverConfigurationVoltageMessage.
-	                // In case of success, you can get temperature.
-	                try
+	                else if (rcvMessage instanceof ReceiverConfigurationTemperatureMessage)
 	                {
 	                	ReceiverConfigurationTemperatureMessage ctm = (ReceiverConfigurationTemperatureMessage)rcvMessage;
 	                	System.out.println(String.format("Gateway (IMEI: %d) Radio module temperature message: %s", receivedGPRSMessage.getMainReceiverID(), ctm.toString()));		
 	                }
-	                catch (ClassCastException ex)
+	                else 
 	                {
-	                	
+	                	System.out.println(String.format("Gateway (IMEI: %d) Radio module configuration message: %s", receivedGPRSMessage.getMainReceiverID(), rcm.toString()));		
 	                }
 	            } else {
 	            	System.out.println(rcvMessage.toString());
