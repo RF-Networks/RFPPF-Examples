@@ -46,7 +46,7 @@
 		<dependency>
 		  <groupId>org.bitbucket.rfnetwork</groupId>
 		  <artifactId>rfppf</artifactId>
-		  <version>3.0.16</version>
+		  <version>3.0.17</version>
 		</dependency>
 	</dependencies>
 	<repositories>
