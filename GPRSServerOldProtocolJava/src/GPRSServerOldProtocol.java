@@ -197,6 +197,7 @@ public class GPRSServerOldProtocol extends ObservableServer implements IParser {
 	                    //// TagIButtonMessage
 	                    //// TagMagnetDetectionGPIO8Message
 	                    //// TagProductionMessage
+						//// TagAveragePulsesPerSecondMessage
 	            		// Print message details by using ToString() method
 	            		System.out.println(tm.toString());
 	            	}

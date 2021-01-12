@@ -166,7 +166,7 @@ namespace GPRSServerOldProtocol
                     //// TagIButtonMessage
                     //// TagMagnetDetectionGPIO8Message
                     //// TagProductionMessage
-
+                    //// TagAveragePulsesPerSecondMessage
 
                     // Print message details by using ToString() method
                     Console.WriteLine(tm.ToString());
