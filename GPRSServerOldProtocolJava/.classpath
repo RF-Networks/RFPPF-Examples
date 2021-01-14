@@ -16,6 +16,6 @@
 			<attribute name="maven.pomderived" value="true"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="C:/Users/ArchilPirmisashvili/source/repos/RFPPF-Examples/GPRSServerOldProtocolJava/CSF.jar"/>
+	<classpathentry kind="lib" path="CSF.jar"/>
 	<classpathentry kind="output" path="target/classes"/>
 </classpath>
