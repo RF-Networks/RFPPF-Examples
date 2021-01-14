@@ -1,8 +1,16 @@
+import java.io.File;
 import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 
-import server.ConnectionToClient;
-import server.ObservableServer;
-
+import org.apache.log4j.Logger;
+import org.apache.log4j.PropertyConfigurator;
+import org.apache.mina.core.buffer.IoBuffer;
+import org.apache.mina.core.service.IoHandlerAdapter;
+import org.apache.mina.core.session.IoSession;
+import org.apache.mina.transport.socket.nio.NioSocketAcceptor;
 import org.bitbucket.rfnetwork.rfppf.common.*;
 import org.bitbucket.rfnetwork.rfppf.messages.MessageFactory;
 import org.bitbucket.rfnetwork.rfppf.messages.gprs.GPRSMessage;
@@ -13,104 +21,115 @@ import org.bitbucket.rfnetwork.rfppf.messages.rfm.diagnostic.DiagnosticGetShortA
 import org.bitbucket.rfnetwork.rfppf.parsers.GPRSParser;
 import org.bitbucket.rfnetwork.rfppf.parsers.RFMeshParser;
 
-public class GPRSServerMeshProtocol extends ObservableServer implements IParser {
+public class GPRSServerMeshProtocol extends IoHandlerAdapter implements IParser {
 
-	public static final int LISTENING_PORT = 4109;
+	public static final int LISTENING_PORT = 4009;
 	
-	public GPRSServerMeshProtocol(int _port) {
-		super(_port);
+	final NioSocketAcceptor acceptor = new NioSocketAcceptor();
+	final static Logger logger = Logger.getLogger(GPRSServerMeshProtocol.class);
+	private final Set<IoSession> sessions = Collections
+            .synchronizedSet(new HashSet<IoSession>());
+	
+	public GPRSServerMeshProtocol(int _port) throws IOException {
+		acceptor.setHandler(this);
+		acceptor.bind(new InetSocketAddress(_port));
+		logger.info("TCP service startup, port:" + _port);
+	}
+	
+	@Override
+	public void sessionCreated(IoSession iosession) throws Exception {
+		super.sessionCreated(iosession);
 	}
 	
 	/**
 	 * Client connected event handler
 	 */
-	protected void clientConnected(ConnectionToClient connToClient) {
-		System.out.println(String.format("Client connected (%s)", connToClient.getInetAddress().toString()));
+	@Override
+	public void sessionOpened(IoSession iosession) throws Exception {
+		super.sessionOpened(iosession);
+		logger.info("Session created");
 		GPRSParser parser = new GPRSParser();
-		parser.SetInfo(connToClient);
 		parser.addListener(this);
-		connToClient.setInfo("Parser", parser);
-		
-		RFMeshParser parser1 = new RFMeshParser();
-		parser1.SetInfo(connToClient);
-		parser1.addListener(this);
-		connToClient.setInfo("Parser1", parser1);
-	}
-	
-	/**
-	 * Client disconnected event handler
-	 */
-	protected synchronized void clientDisconnected(ConnectionToClient client) {
-		System.out.println(String.format("Client disconnected (%s)", client.getName()));
-		Object parser = client.getInfo("Parser");
-		parser = null;
-		client.setInfo("Parser", parser);
-		
-		parser = client.getInfo("Parser1");
-		parser = null;
-		client.setInfo("Parser1", parser);
-	}
-	
-	/**
-	 * Listening exception event handler
-	 */
-	protected void listeningException(Throwable exception) {
-		System.out.println(String.format("Listening exception: %s", exception.getMessage()));
-	}
-
-	/**
-	 * Client exception event handler
-	 */
-	protected synchronized void clientException(ConnectionToClient client, Throwable exception) {
-		System.out.println(String.format("[%s] Client exception", client.getName()));
-	}
-	
-	/**
-	 * Server stopped event handler
-	 */
-	protected void serverStopped() {
-		System.out.println("Server stopped");
-	}
-	
-	/**
-	 * Server closed event handler
-	 */
-	protected void serverClosed() {
-		System.out.println("[%s] Server closed");
-	}
-	
-	/**
-	 * Server started event handler
-	 */
-	protected void serverStarted() {
-		System.out.println(String.format("Server started (Port %d).", this.getPort()));
+		parser.SetInfo(iosession);
+		iosession.setAttribute("Parser", parser);
 	}
 	
 	/**
 	 * Handle incoming message from client event handler
 	 */
-	protected synchronized void handleMessageFromClient(byte[] message,
-			ConnectionToClient client) {
-		ProtocolParser parser = (ProtocolParser) client.getInfo("Parser");
-		try {
-			parser.AppendBytes(message);
+	@Override
+	public void messageReceived(IoSession session, Object message)
+			throws Exception {
+		IoBuffer bbuf = (IoBuffer) message;
+		byte[] byten = new byte[bbuf.limit()];
+		bbuf.get(byten, bbuf.position(), bbuf.limit());
+		ProtocolParser parser = (ProtocolParser)session.getAttribute("Parser");
+		logger.debug("-> " + RFPPFHelper.ByteArrayToHexString(byten));
+		try
+		{
+			parser.AppendBytes(byten);
 		}
 		catch (Exception ex)
 		{
 			// Catch parsing exception
-			System.out.println(String.format("Parsing exception: %s", ex.toString()));
-			System.out.println(String.format("Data received: %s", RFPPFHelper.ByteArrayToHexString(message, true)));
+			logger.warn(String.format("Parsing exception: %s", ex.toString()));
 		}
 	}
 	
-	public static void main(String[] argv) {
-		GPRSServerMeshProtocol server = new GPRSServerMeshProtocol(LISTENING_PORT);
-		try {
-			server.listen();
-			
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+	/**
+	 * Client disconnected event handler
+	 */
+	@Override
+	public void sessionClosed(IoSession session) throws Exception {
+		logger.info("session closed");
+		Object parser = session.getAttribute("Parser");
+		parser = null;
+		session.setAttribute("Parser", parser);
+		sessions.remove(session);
+	}
+	
+	/**
+	 * Client exception event handler
+	 */
+	@Override
+	public void exceptionCaught(IoSession session, Throwable cause)
+			throws Exception {
+		logger.info(String.format("session exception: %s", cause.toString()));
+		super.exceptionCaught(session, cause);
+	}
+	
+	public void SendToClient(IoSession client, byte[] msg) {
+		logger.debug("<- " + RFPPFHelper.ByteArrayToHexString(msg));
+		client.write(IoBuffer.wrap(msg));
+	}
+	
+	public void updateClientIMEI(IoSession client, long imei) {
+        if (client == null || imei < 1 || client.getAttribute("IMEI") != null && (long)client.getAttribute("IMEI") == imei)
+            return;
+        logger.info(String.format("Connection to %s IMEI updated %d", client.getRemoteAddress().toString(), imei));
+        client.setAttribute("IMEI", imei);
+    }
+	
+	/**
+     * Send message to specific gateway
+     *
+     * @param imei Gateway IMEI
+     * @param msg  Message bytes
+     */
+    public void SendMessageToClient(long imei, GPRSMessage msg) {
+    	synchronized (sessions) {
+    		for (IoSession session : sessions) {
+    			if (session.isConnected() && session.getAttribute("IMEI") != null && (long)session.getAttribute("IMEI") == imei) {
+    				SendToClient(session, msg.GetBytes());
+    			}
+    		}
+    	}
+    }
+	
+	public static void main(String[] argv) throws IOException {
+		String log4jConfigFile = System.getProperty("user.dir") + File.separator + "conf" + File.separator + "log4j.properties";
+		PropertyConfigurator.configure(log4jConfigFile);
+		new GPRSServerMeshProtocol(LISTENING_PORT);
 		while (true) {
 			try {
 				Thread.sleep(1000);
@@ -129,13 +148,11 @@ public class GPRSServerMeshProtocol extends ObservableServer implements IParser 
 			
 			// Because GPRS protocol requires acknowledgments. Send acknowledge message.
             GPRSMessage ack = GPRSMessage.GenerateGPRSAcknowledgeMessage(receivedGPRSMessage.getMessageNumber());
-            try {
-				((ConnectionToClient)parser.GetInfo()).sendToClient(ack.GetBytes());
-			} catch (IOException e) {
-				System.out.println(String.format("Can't send acknowledge. %s", e.getMessage()));
-			}
+            SendToClient((IoSession)parser.GetInfo(), ack.GetBytes());
             
-            
+            // Update connection IMEI for sending commands out of parser
+ 			updateClientIMEI((IoSession)parser.GetInfo(), receivedGPRSMessage.getMainReceiverID());
+         			
             // Handle received message
             ReceiverMessage rcvMessage = null;
             RFMMessage meshMessage = null;
@@ -148,21 +165,21 @@ public class GPRSServerMeshProtocol extends ObservableServer implements IParser 
             		meshMessage = null;
             		rcvMessage = (ReceiverMessage)MessageFactory.ParseReceiverMessage(receivedGPRSMessage.getBody());
             	} catch (Exception e) {
-            		System.out.println(String.format("Can't handle received message. %s", e.getMessage()));
+            		logger.warn(String.format("Can't handle received message. %s", e.getMessage()));
             	}
 			}
             
             if (meshMessage != null) {
             	// Mesh protocol
-            	System.out.println(String.format("GPRS Message # %d, IMEI: %d, Address: %d", receivedGPRSMessage.getMessageNumber(), receivedGPRSMessage.getMainReceiverID(), receivedGPRSMessage.getReceiverID()));
+            	logger.info(String.format("GPRS Message # %d, IMEI: %d, Address: %d", receivedGPRSMessage.getMessageNumber(), receivedGPRSMessage.getMainReceiverID(), receivedGPRSMessage.getReceiverID()));
             	
             	// !!! Here you can implement your custom logics according to message type.
-            	System.out.println(meshMessage.toString());
+            	logger.info(meshMessage.toString());
             	
             	// Or handle message according its type as follows
             	if (meshMessage instanceof DiagnosticGetShortAddressMessage) {
             		DiagnosticGetShortAddressMessage diagnosticGetShorAddressMessage = (DiagnosticGetShortAddressMessage)meshMessage;
-            		//System.out.println(String.format("Tag %d DiagnosticGetShortAddressMessage", diagnosticGetShorAddressMessage.getDeviceID()));
+            		//logger.info(String.format("Tag %d DiagnosticGetShortAddressMessage", diagnosticGetShorAddressMessage.getDeviceID()));
             	}
             	
             	//// Additional messages. Use as shown before:
@@ -193,16 +210,16 @@ public class GPRSServerMeshProtocol extends ObservableServer implements IParser 
             	// Old protocol receiver message
             	
             	// Print receiver details such as IMEI and Address
-	            System.out.println(String.format("GPRS Message # %d, IMEI: %d, Address: %d, Inner message type: %s", receivedGPRSMessage.getMessageNumber(), receivedGPRSMessage.getMainReceiverID(), receivedGPRSMessage.getReceiverID(), rcvMessage.getClass().toString()));
+	            logger.info(String.format("GPRS Message # %d, IMEI: %d, Address: %d, Inner message type: %s", receivedGPRSMessage.getMessageNumber(), receivedGPRSMessage.getMainReceiverID(), receivedGPRSMessage.getReceiverID(), rcvMessage.getClass().toString()));
 	            if (rcvMessage.getMessageType() == ReceiverMessage.MessageTypes.PowerAlert) {
 	            	// Receiver power alert. Is sent from the gateway when external power is connected or disconnected
 	                // Note: Available only on gateways with the inner battery
 	                ReceiverPowerAlertMessage pam = (ReceiverPowerAlertMessage)rcvMessage;
-	                System.out.println(String.format("Gateway (IMEI: %d) External power %s", receivedGPRSMessage.getMainReceiverID(), pam.getExternalPowerConnected() ? "connected" : "disconnected"));		
+	                logger.info(String.format("Gateway (IMEI: %d) External power %s", receivedGPRSMessage.getMainReceiverID(), pam.getExternalPowerConnected() ? "connected" : "disconnected"));		
 	            } else if (rcvMessage.getMessageType() == ReceiverMessage.MessageTypes.ModemVoltage) {
 	            	// Modem voltage. Actually sends voltage measured inside GPRS modem module
 	                ReceiverModemVoltageMessage mv = (ReceiverModemVoltageMessage)rcvMessage;
-	                System.out.println(String.format("Gateway (IMEI: %d) Modem voltage message: %s", receivedGPRSMessage.getMainReceiverID(), mv.toString()));		
+	                logger.info(String.format("Gateway (IMEI: %d) Modem voltage message: %s", receivedGPRSMessage.getMainReceiverID(), mv.toString()));		
 	            } else if (rcvMessage.getMessageType() == ReceiverMessage.MessageTypes.ReceiverMessage) {
 	            	// Receiver configuration message.
 	            	
@@ -210,29 +227,29 @@ public class GPRSServerMeshProtocol extends ObservableServer implements IParser 
 	                if (rcvMessage instanceof ReceiverConfigurationVoltageMessage)
 	                {
 	                	ReceiverConfigurationVoltageMessage cvm = (ReceiverConfigurationVoltageMessage)rcvMessage;
-	                	System.out.println(String.format("Gateway (IMEI: %d) Radio module voltage message: %s", receivedGPRSMessage.getMainReceiverID(), cvm.toString()));		
+	                	logger.info(String.format("Gateway (IMEI: %d) Radio module voltage message: %s", receivedGPRSMessage.getMainReceiverID(), cvm.toString()));		
 	                }
 	                else if (rcvMessage instanceof ReceiverConfigurationExternalVoltageMessage)
 	                {
 	                	ReceiverConfigurationExternalVoltageMessage cevm = (ReceiverConfigurationExternalVoltageMessage)rcvMessage;
-	                	System.out.println(String.format("Gateway (IMEI: %d) External voltage message: %s", receivedGPRSMessage.getMainReceiverID(), cevm.toString()));		
+	                	logger.info(String.format("Gateway (IMEI: %d) External voltage message: %s", receivedGPRSMessage.getMainReceiverID(), cevm.toString()));		
 	                }
 	                else if (rcvMessage instanceof ReceiverConfigurationTemperatureMessage)
 	                {
 	                	ReceiverConfigurationTemperatureMessage ctm = (ReceiverConfigurationTemperatureMessage)rcvMessage;
-	                	System.out.println(String.format("Gateway (IMEI: %d) Radio module temperature message: %s", receivedGPRSMessage.getMainReceiverID(), ctm.toString()));		
+	                	logger.info(String.format("Gateway (IMEI: %d) Radio module temperature message: %s", receivedGPRSMessage.getMainReceiverID(), ctm.toString()));		
 	                }
 	                else 
 	                {
-	                	System.out.println(String.format("Gateway (IMEI: %d) Radio module configuration message: %s", receivedGPRSMessage.getMainReceiverID(), rcm.toString()));		
+	                	logger.info(String.format("Gateway (IMEI: %d) Radio module configuration message: %s", receivedGPRSMessage.getMainReceiverID(), rcm.toString()));		
 	                }
 	            } else {
-	            	System.out.println(rcvMessage.toString());
+	            	logger.info(rcvMessage.toString());
 	            }
             }
 		} else if (parser instanceof RFMeshParser) {
 			// RF-Networks Mesh protocol (New Protocol) message parsed
-			System.out.println(msg.toString());
+			logger.info(msg.toString());
 		}
 		
 		// To send SMS via GPRS gateway use following code
@@ -261,6 +278,6 @@ public class GPRSServerMeshProtocol extends ObservableServer implements IParser 
 	@Override
 	public void MessageError(ProtocolParser parser, ProtocolMessage msg) {
 		// Parsing message failure
-		System.out.println(String.format("Parsing error: %s", msg.toString()));
+		logger.info(String.format("Parsing error: %s", msg.toString()));
 	}
 }

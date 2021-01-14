@@ -36,17 +36,29 @@
 	</build>
 	<dependencies>
 		<dependency>
-			<groupId>org.bitbucket.rfnetwork</groupId>
-			<artifactId>csf</artifactId>
-			<version>1.0</version>
-			<scope>system</scope>
-			<type>jar</type>
-			<systemPath>${project.basedir}/CSF.jar</systemPath>
+			<groupId>org.apache.mina</groupId>
+			<artifactId>mina-core</artifactId>
+			<version>2.1.4</version>
 		</dependency>
 		<dependency>
 		  <groupId>org.bitbucket.rfnetwork</groupId>
 		  <artifactId>rfppf</artifactId>
-		  <version>3.0.28</version>
+		  <version>3.0.27</version>
+		</dependency>		
+		<dependency>
+			<groupId>org.apache.logging.log4j</groupId>
+			<artifactId>log4j-api</artifactId>
+			<version>2.14.0</version>
+		</dependency>
+		<dependency>
+			<groupId>log4j</groupId>
+			<artifactId>log4j</artifactId>
+			<version>1.2.17</version>
+		</dependency>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-simple</artifactId>
+			<version>1.7.21</version>
 		</dependency>
 	</dependencies>
 	<repositories>
@@ -57,6 +69,11 @@
 			<snapshots>
 				<enabled>true</enabled>
 			</snapshots>
+		</repository>
+		<repository>
+			<id>mina-core</id>
+			<name>mina-core</name>
+			<url>https://mvnrepository.com/artifact/org.apache.mina/mina-core</url>
 		</repository>
 	</repositories>
 </project>
