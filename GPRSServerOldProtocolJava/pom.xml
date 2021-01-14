@@ -43,7 +43,7 @@
 		<dependency>
 		  <groupId>org.bitbucket.rfnetwork</groupId>
 		  <artifactId>rfppf</artifactId>
-		  <version>3.0.27</version>
+		  <version>3.0.28</version>
 		</dependency>		
 		<dependency>
 			<groupId>org.apache.logging.log4j</groupId>
