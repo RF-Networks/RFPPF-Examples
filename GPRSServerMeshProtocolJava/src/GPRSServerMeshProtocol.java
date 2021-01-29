@@ -106,6 +106,18 @@ public class GPRSServerMeshProtocol extends IoHandlerAdapter implements IParser 
 	public void updateClientIMEI(IoSession client, long imei) {
         if (client == null || imei < 1 || client.getAttribute("IMEI") != null && (long)client.getAttribute("IMEI") == imei)
             return;
+        // Close previous sessions
+        synchronized (sessions) {
+    		for (IoSession session : sessions) {
+    			if (client != session && 
+    					session.isConnected() && 
+    					session.getAttribute("IMEI") != null 
+    					&& (long)session.getAttribute("IMEI") == imei) {
+    				session.closeNow();
+    			}
+    		}
+    	}
+
         logger.info(String.format("Connection to %s IMEI updated %d", client.getRemoteAddress().toString(), imei));
         client.setAttribute("IMEI", imei);
     }
