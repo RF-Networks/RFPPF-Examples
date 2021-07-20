@@ -5,8 +5,8 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.apache.log4j.Logger;
-import org.apache.log4j.PropertyConfigurator;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.core.Logger;
 import org.apache.mina.core.buffer.IoBuffer;
 import org.apache.mina.core.service.IoHandlerAdapter;
 import org.apache.mina.core.session.IoSession;
@@ -26,7 +26,7 @@ public class GPRSServerMeshProtocol extends IoHandlerAdapter implements IParser 
 	public static final int LISTENING_PORT = 4009;
 	
 	final NioSocketAcceptor acceptor = new NioSocketAcceptor();
-	final static Logger logger = Logger.getLogger(GPRSServerMeshProtocol.class);
+	final static Logger logger = (Logger)LogManager.getLogger(GPRSServerMeshProtocol.class);
 	private final Set<IoSession> sessions = Collections
             .synchronizedSet(new HashSet<IoSession>());
 	
@@ -139,8 +139,6 @@ public class GPRSServerMeshProtocol extends IoHandlerAdapter implements IParser 
     }
 	
 	public static void main(String[] argv) throws IOException {
-		String log4jConfigFile = System.getProperty("user.dir") + File.separator + "conf" + File.separator + "log4j.properties";
-		PropertyConfigurator.configure(log4jConfigFile);
 		new GPRSServerMeshProtocol(LISTENING_PORT);
 		while (true) {
 			try {

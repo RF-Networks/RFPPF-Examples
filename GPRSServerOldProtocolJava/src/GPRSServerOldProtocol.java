@@ -5,8 +5,8 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.apache.log4j.Logger;
-import org.apache.log4j.PropertyConfigurator;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.core.Logger;
 import org.apache.mina.core.buffer.IoBuffer;
 import org.apache.mina.core.service.IoHandlerAdapter;
 import org.apache.mina.core.session.IoSession;
@@ -24,7 +24,7 @@ public class GPRSServerOldProtocol extends IoHandlerAdapter implements IParser {
 	public static final int LISTENING_PORT = 4009;
 	
 	final NioSocketAcceptor acceptor = new NioSocketAcceptor();
-	final static Logger logger = Logger.getLogger(GPRSServerOldProtocol.class);
+	final static Logger logger = (Logger)LogManager.getLogger(GPRSServerOldProtocol.class);
 	private final Set<IoSession> sessions = Collections
             .synchronizedSet(new HashSet<IoSession>());
 	
@@ -125,8 +125,6 @@ public class GPRSServerOldProtocol extends IoHandlerAdapter implements IParser {
     }
 	
 	public static void main(String[] argv) throws IOException {
-		String log4jConfigFile = System.getProperty("user.dir") + File.separator + "conf" + File.separator + "log4j.properties";
-		PropertyConfigurator.configure(log4jConfigFile);
 		new GPRSServerOldProtocol(LISTENING_PORT);
 		while (true) {
 			try {
@@ -261,6 +259,13 @@ public class GPRSServerOldProtocol extends IoHandlerAdapter implements IParser {
                 {
                 	logger.info(String.format("Gateway (IMEI: %d) Radio module configuration message: %s", receivedGPRSMessage.getMainReceiverID(), rcm.toString()));		
                 }
+            } else if (rcvMessage.getMessageType() == MessageTypes.Weight) {
+            	// Weight message
+            	ReceiverWeightMessage rwm = (ReceiverWeightMessage)rcvMessage;
+            	
+            	// To get weight use rwm.getWeight()
+            	
+            	logger.info(rwm.toString());
             } else {
             	logger.info(rcvMessage.toString());
             }
