@@ -13,7 +13,7 @@ namespace GPRSServerOldProtocol
 {
     class Program
     {
-        public const int LISTENING_PORT = 4109;
+        public const int LISTENING_PORT = 4009;
 
         public static Dictionary<long, ClientInfo> infos = new Dictionary<long, ClientInfo>();
 
@@ -223,6 +223,13 @@ namespace GPRSServerOldProtocol
                 {
                     Console.WriteLine(string.Format("Gateway (IMEI: {0}) Radio module configuration message: {1}", receivedGPRSMessage.MainReceiverID, rcm.ToString()));
                 }               
+            }
+            else if (rcvMessage.MessageType == ReceiverMessage.MessageTypes.ModbusMeter)
+            {
+                ReceiverModbusMeterMessage mbmsg = rcvMessage as ReceiverModbusMeterMessage;
+
+                Console.WriteLine(mbmsg.ToString());
+                Console.WriteLine(RFPPFHelper.ByteArrayToHexString(mbmsg.Bytes));
             }
             else
             {

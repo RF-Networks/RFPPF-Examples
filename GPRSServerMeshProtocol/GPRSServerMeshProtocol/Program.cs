@@ -106,7 +106,7 @@ namespace GPRSServerMeshProtocol
             try
             {
                 meshMessage = MessageFactory.ParseMeshMessage(receivedGPRSMessage.Body) as RFMMessage;
-            } 
+            }
             catch
             {
                 try

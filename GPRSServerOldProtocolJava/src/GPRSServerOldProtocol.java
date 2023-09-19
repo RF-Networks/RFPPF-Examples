@@ -21,7 +21,7 @@ import org.bitbucket.rfnetwork.rfppf.parsers.RFMeshParser;
 
 public class GPRSServerOldProtocol extends IoHandlerAdapter implements IParser {
 
-	public static final int LISTENING_PORT = 4009;
+	public static final int LISTENING_PORT = 4109;
 	
 	final NioSocketAcceptor acceptor = new NioSocketAcceptor();
 	final static Logger logger = (Logger)LogManager.getLogger(GPRSServerOldProtocol.class);

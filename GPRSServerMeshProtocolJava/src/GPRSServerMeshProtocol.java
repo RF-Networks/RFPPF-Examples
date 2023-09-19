@@ -1,4 +1,3 @@
-import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Collections;
@@ -15,15 +14,21 @@ import org.bitbucket.rfnetwork.rfppf.common.*;
 import org.bitbucket.rfnetwork.rfppf.messages.MessageFactory;
 import org.bitbucket.rfnetwork.rfppf.messages.gprs.GPRSMessage;
 import org.bitbucket.rfnetwork.rfppf.messages.oldprotocol.*;
-import org.bitbucket.rfnetwork.rfppf.messages.oldprotocol.ReceiverMessage.MessageTypes;
 import org.bitbucket.rfnetwork.rfppf.messages.rfm.RFMMessage;
+import org.bitbucket.rfnetwork.rfppf.messages.rfm.data.DataRawInMessage;
 import org.bitbucket.rfnetwork.rfppf.messages.rfm.diagnostic.DiagnosticGetShortAddressMessage;
+import org.bitbucket.rfnetwork.rfppf.messages.rfm.event.CheckInEventV2Message;
+import org.bitbucket.rfnetwork.rfppf.messages.rfm.event.CheckOutEventMessage;
+import org.bitbucket.rfnetwork.rfppf.messages.rfm.event.SchedulerExecutedEventV2Message;
+import org.bitbucket.rfnetwork.rfppf.messages.rfm.scheduler.GetSchedulerRequestV2Message;
+import org.bitbucket.rfnetwork.rfppf.messages.rfm.scheduler.GetSchedulerRequestV2MessageBuilder;
+import org.bitbucket.rfnetwork.rfppf.messages.rfm.scheduler.SetSchedulerRequestV2MessageBuilder;
 import org.bitbucket.rfnetwork.rfppf.parsers.GPRSParser;
 import org.bitbucket.rfnetwork.rfppf.parsers.RFMeshParser;
 
 public class GPRSServerMeshProtocol extends IoHandlerAdapter implements IParser {
 
-	public static final int LISTENING_PORT = 4009;
+	public static final int LISTENING_PORT = 4109;
 	
 	final NioSocketAcceptor acceptor = new NioSocketAcceptor();
 	final static Logger logger = (Logger)LogManager.getLogger(GPRSServerMeshProtocol.class);
@@ -106,6 +111,7 @@ public class GPRSServerMeshProtocol extends IoHandlerAdapter implements IParser 
 	public void updateClientIMEI(IoSession client, long imei) {
         if (client == null || imei < 1 || client.getAttribute("IMEI") != null && (long)client.getAttribute("IMEI") == imei)
             return;
+    
         // Close previous sessions
         synchronized (sessions) {
     		for (IoSession session : sessions) {
@@ -181,16 +187,77 @@ public class GPRSServerMeshProtocol extends IoHandlerAdapter implements IParser 
             
             if (meshMessage != null) {
             	// Mesh protocol
-            	logger.info(String.format("GPRS Message # %d, IMEI: %d, Address: %d", receivedGPRSMessage.getMessageNumber(), receivedGPRSMessage.getMainReceiverID(), receivedGPRSMessage.getReceiverID()));
+            	//logger.info(String.format("GPRS Message # %d, IMEI: %d, Address: %d", receivedGPRSMessage.getMessageNumber(), receivedGPRSMessage.getMainReceiverID(), receivedGPRSMessage.getReceiverID()));
             	
             	// !!! Here you can implement your custom logics according to message type.
-            	logger.info(meshMessage.toString());
+            	//logger.info(meshMessage.toString());
+            	
+            	if (meshMessage instanceof DataRawInMessage) {
+            		DataRawInMessage dataRawMessage = (DataRawInMessage)meshMessage;
+            	}
+            	else
+            	{
+            		logger.info(meshMessage.toString());
+            	}
             	
             	// Or handle message according its type as follows
             	if (meshMessage instanceof DiagnosticGetShortAddressMessage) {
             		DiagnosticGetShortAddressMessage diagnosticGetShorAddressMessage = (DiagnosticGetShortAddressMessage)meshMessage;
             		//logger.info(String.format("Tag %d DiagnosticGetShortAddressMessage", diagnosticGetShorAddressMessage.getDeviceID()));
             	}
+            	
+            	if (meshMessage instanceof CheckInEventV2Message)
+            	{
+            		CheckInEventV2Message checkInMessage = (CheckInEventV2Message)meshMessage;
+            		
+            		//checkInMessage.getDeviceSDLA() // Device ID
+            		//checkInMessage.getParentDeviceSDLA() // Parent Device ID
+            		//checkInMessage.getParentRSSI() // How devices sees it's parent
+            		//checkInMessage.getRSSI() // How parent sees this device
+            		//checkInMessage.getVoltage() // Battery voltage
+            		//checkInMessage.getIsLowPower() // Low power mode
+            		//checkInMessage.getPosition() // Position in network cycle
+            		//checkInMessage.getSWType() // Software type
+            		//checkInMessage.getVersionMaj() // Major version
+            		//checkInMessage.getVersionMin() // Minor version
+            		//checkInMessage.getVersionBuild() // Build version
+            		//checkInMessage.getTS() // Timestamp
+            	}
+            	
+            	if (meshMessage instanceof CheckOutEventMessage)
+            	{
+            		CheckOutEventMessage checkOutMessage = (CheckOutEventMessage)meshMessage;
+            		
+            		//checkOutMessage.getDeviceSDLA() // Device 
+            		//checkOutMessage.getTS() // Timestamp
+            	}
+            	
+            	if (meshMessage instanceof SchedulerExecutedEventV2Message)
+            	{
+            		SchedulerExecutedEventV2Message schedulerExecutedEventMessage = (SchedulerExecutedEventV2Message)meshMessage;
+            	}
+            	
+//            	SetSchedulerRequestV2MessageBuilder schedulerRequestMessageBuilder = new SetSchedulerRequestV2MessageBuilder();
+//            	schedulerRequestMessageBuilder.Version = 2;
+//            	//schedulerRequestMessageBuilder.MessageNumber = <Message Number>;
+//            	//schedulerRequestMessageBuilder.DeviceID = <Device ID>;
+//            	//schedulerRequestMessageBuilder.SchedulerNumber = <Scheduler Number>;
+//            	//schedulerRequestMessageBuilder.SchedulerNumberOfExecutions = <Number of executions>;
+//            	//schedulerRequestMessageBuilder.SchedulerPeriod = <Period for periodic executions>;
+//            	//schedulerRequestMessageBuilder.SchedulerOperation1Time = <First operation start time (Open)>; // 0x41 - first 6 bit mask, last 6 bit gpio, in your case only GPIO 1
+//            	//schedulerRequestMessageBuilder.SchedulerOperation2Time = <Second operations start time (Close)>; // 0x40 - as previous command, but GPIO 1 is set to 0 (0x40 is mask, 0x00 is value)
+//            	// +-----------------------------------+-----------------------------------+
+//            	// |                MASK               |			     VALUE
+//            	// +-----------------------------------+-----------------------------------+
+//            	// |  6  |  5  |  4  |  3  |  2  |  1  |  6  |  5  |  4  |  3  |  2  |  1  |
+//            	// +-----------------------------------+-----------------------------------+
+//            	// |  0  |  0  |  0  |  0  |  0  |  1  |  0  |  0  |  0  |  0  |  0  |  1  |  = 0x41
+//            	// +-----------------------------------+-----------------------------------+
+//            	// |  0  |  0  |  0  |  0  |  0  |  1  |  0  |  0  |  0  |  0  |  0  |  0  |  = 0x40
+//            	// +-----------------------------------+-----------------------------------+
+//            	//schedulerRequestMessageBuilder.Command1 = <First operation command (Open)>;
+//            	//schedulerRequestMessageBuilder.Command2 = <Second operation command (Close)>;
+//            	SetSchedulerRequestV2Message shedulerRequest = (SetSchedulerRequestV2Message)MessageFactory.CreateMessage(SetSchedulerRequestV2Message.class, schedulerRequestMessageBuilder);
             	
             	//// Additional messages. Use as shown before:
                 // GetRegisterRequestMessage
@@ -259,7 +326,7 @@ public class GPRSServerMeshProtocol extends IoHandlerAdapter implements IParser 
             }
 		} else if (parser instanceof RFMeshParser) {
 			// RF-Networks Mesh protocol (New Protocol) message parsed
-			logger.info(msg.toString());
+			logger.info(msg.getClass().toString());
 		}
 		
 		// To send SMS via GPRS gateway use following code
