@@ -169,7 +169,7 @@ namespace GPRSServerOldProtocol
                     //// TagAveragePulsesPerSecondMessage
 
                     // Print message details by using ToString() method
-                    Console.WriteLine(tm.ToString());
+                    Console.WriteLine(string.Format("{0} - {1}", receivedGPRSMessage.Timestamp, tm.ToString()));
                 }
             }
             else if (rcvMessage.MessageType == ReceiverMessage.MessageTypes.Transient)
