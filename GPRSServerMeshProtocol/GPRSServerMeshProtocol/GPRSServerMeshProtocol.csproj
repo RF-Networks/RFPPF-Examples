@@ -36,8 +36,8 @@
     <Reference Include="Crc, Version=1.0.3.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\CrcDotNET.1.0.3\lib\net35\Crc.dll</HintPath>
     </Reference>
-    <Reference Include="RFPPF, Version=3.0.44.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\RFPPF.3.0.44\lib\net46\RFPPF.dll</HintPath>
+    <Reference Include="RFPPF, Version=3.0.45.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\RFPPF.3.0.45\lib\net46\RFPPF.dll</HintPath>
     </Reference>
     <Reference Include="Scs, Version=1.1.1.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\Scs.1.1.1\lib\net40-client\Scs.dll</HintPath>
