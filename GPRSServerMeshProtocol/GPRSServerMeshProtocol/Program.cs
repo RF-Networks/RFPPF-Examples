@@ -20,7 +20,7 @@ namespace GPRSServerMeshProtocol
 {
     class Program
     {
-        public const int LISTENING_PORT = 4109;
+        public const int LISTENING_PORT = 4009;
 
         public static Dictionary<long, ClientInfo> infos = new Dictionary<long, ClientInfo>();
 
