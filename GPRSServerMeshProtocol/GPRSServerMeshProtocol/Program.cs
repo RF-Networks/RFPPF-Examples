@@ -4,6 +4,7 @@ using Hik.Communication.Scs.Server;
 using RFPPF.Common;
 using RFPPF.Messages;
 using RFPPF.Messages.GPRS;
+using RFPPF.Messages.GPRS.Gateway;
 using RFPPF.Messages.OldProtocol;
 using RFPPF.Messages.RFM;
 using RFPPF.Messages.RFM.Configuration;
@@ -15,14 +16,20 @@ using RFPPF.Parsers;
 using System;
 using System.Collections.Generic;
 using System.Net.Http.Headers;
+using System.Numerics;
+using System.Text;
 
 namespace GPRSServerMeshProtocol
 {
     class Program
     {
-        public const int LISTENING_PORT = 4009;
+        public const int LISTENING_PORT = 4008;
 
         public static Dictionary<long, ClientInfo> infos = new Dictionary<long, ClientInfo>();
+
+        public static System.Timers.Timer timer;
+
+        public static IScsServer server;
 
         public class ClientInfo
         {
@@ -31,12 +38,17 @@ namespace GPRSServerMeshProtocol
 
         static void Main(string[] args)
         {
-            IScsServer server = ScsServerFactory.CreateServer(new ScsTcpEndPoint(LISTENING_PORT));
+            server = ScsServerFactory.CreateServer(new ScsTcpEndPoint(LISTENING_PORT));
             server.WireProtocolFactory = new MyWireProtocolFactory();
             server.ClientConnected += Server_ClientConnected;
             server.ClientDisconnected += Server_ClientDisconnected;
 
+            timer = new System.Timers.Timer(TimeSpan.FromMinutes(1).TotalMilliseconds);
+            timer.AutoReset = true;
+            timer.Elapsed += TimerElapsed;
+
             server.Start(); //Start the server
+            timer.Start();
 
             Console.WriteLine("Server is started successfully. Press enter to stop...");
             Console.ReadLine(); //Wait user to press enter
@@ -47,6 +59,33 @@ namespace GPRSServerMeshProtocol
                 client.Disconnect();
             }
             server.Stop(); //Stop the server
+        }
+
+        private static void TimerElapsed(object sender, System.Timers.ElapsedEventArgs e)
+        {
+            ushort _outMsgNum = 0;
+            //foreach (KeyValuePair<long, ClientInfo> info in infos)
+            //{
+            //    if (info.Value != null)
+            //    {
+            //        info.Value.parser.
+            //    }
+            //}
+            foreach (IScsServerClient client in server.Clients.GetAllItems())
+            {
+                ClientInfo info = infos[client.ClientId];
+                if (info != null)
+                {
+                    GPRSMessage gprsMessage = GPRSMessage.GenerateGatewayRPCRequestMessage(new BigInteger(Guid.NewGuid().ToByteArray()), Encoding.ASCII.GetBytes("Signal"));
+                    gprsMessage.Version = 1;
+                    gprsMessage.PayloadType = 1;
+                    gprsMessage.MessageNumber = _outMsgNum++;
+                    gprsMessage.Timestamp = DateTime.UtcNow;
+                    gprsMessage.RSSI = 0xFF;
+
+                    client.SendMessage(new ScsRawDataMessage(gprsMessage.Bytes));
+                }
+            }
         }
 
         private static void Server_ClientDisconnected(object sender, ServerClientEventArgs e)
@@ -95,17 +134,31 @@ namespace GPRSServerMeshProtocol
         {
             ReceiverMessage rcvMessage = null;
             RFMMessage meshMessage = null;
+            GatewayMessage gatewayMessage = null;
 
             // Message was successfully parsed
             GPRSMessage receivedGPRSMessage = (e.Message as GPRSMessage);
-            // Because GPRS protocol requires acknowledgments. Send acknowledge message.
-            GPRSMessage ack = GPRSMessage.GenerateGPRSAcknowledgeMessage(receivedGPRSMessage.MessageNumber);
-            ((sender as GPRSParser).Info as IScsServerClient).SendMessage(new ScsRawDataMessage(ack.Bytes));
-
+            if (receivedGPRSMessage != null && ((receivedGPRSMessage.GatewayMessage == null) ||
+                (receivedGPRSMessage.GatewayMessage != null 
+                && receivedGPRSMessage.GatewayMessage.MessageType != RFPPF.Messages.GPRS.Gateway.GatewayMessage.MessageTypes.Acknowledge
+                && receivedGPRSMessage.GatewayMessage.MessageType != RFPPF.Messages.GPRS.Gateway.GatewayMessage.MessageTypes.WhoIAm)))
+            {
+                // Because GPRS protocol requires acknowledgments except acknowledge message. Send acknowledge message.
+                GPRSMessage ack = GPRSMessage.GenerateGPRSGatewayAcknowledgeMessage(receivedGPRSMessage.MessageNumber);
+                ((sender as GPRSParser).Info as IScsServerClient).SendMessage(new ScsRawDataMessage(ack.Bytes));
+            }
             // Handle received message. It can be mesh protocol message or old protocol receiver message
             try
             {
-                meshMessage = MessageFactory.ParseMeshMessage(receivedGPRSMessage.Body) as RFMMessage;
+                gatewayMessage = receivedGPRSMessage.GatewayMessage;
+                if (gatewayMessage == null)
+                {
+                    meshMessage = MessageFactory.ParseMeshMessage(receivedGPRSMessage.Body) as RFMMessage;
+                    if (meshMessage == null)
+                    {
+                        rcvMessage = MessageFactory.ParseReceiverMessage(receivedGPRSMessage.Body) as ReceiverMessage;
+                    }
+                }
             }
             catch
             {
@@ -206,9 +259,32 @@ namespace GPRSServerMeshProtocol
                         Console.WriteLine(string.Format("Gateway (IMEI: {0}) Radio module configuration message: {1}", receivedGPRSMessage.MainReceiverID, rcm.ToString()));
                     }
                 }
+                //else if(rcvMessage.MessageType == ReceiverMessage.MessageTypes.RPCResponse)
+                //{
+                //    ReceiverRPCResponseMessage rcpr = rcvMessage as ReceiverRPCResponseMessage;
+                //    byte[] bytes = new byte[16];
+                //    rcpr.RPCID.ToByteArray().CopyTo(bytes, 0);
+                //    Console.WriteLine(string.Format("Gateway (IMEI: {0}) RPC response message: ID - {1}, Data - {2}", receivedGPRSMessage.MainReceiverID, new Guid(bytes), Encoding.ASCII.GetString(rcpr.Payload)));
+                //}
                 else
                 {
                     Console.WriteLine(rcvMessage.ToString());
+                }
+            }
+            else if (gatewayMessage != null)
+            {
+                // Gateway messages
+                switch (gatewayMessage.MessageType)
+                {
+                    case GatewayMessage.MessageTypes.Acknowledge:
+                        Console.WriteLine(string.Format("Gateway (IMEI: {0}) Acknowledge message: {1}", receivedGPRSMessage.MainReceiverID, gatewayMessage.ToString()));
+                        break;
+                    case GatewayMessage.MessageTypes.WhoIAm:
+                        Console.WriteLine(string.Format("Gateway (IMEI: {0}) WhoIAm message: {1}", receivedGPRSMessage.MainReceiverID, gatewayMessage.ToString()));
+                        break;
+                    default:
+                        Console.WriteLine(string.Format("GPRS Message # {0}, IMEI: {1}, Address: {2}, Message type: {3}", receivedGPRSMessage.MessageNumber, receivedGPRSMessage.MainReceiverID, receivedGPRSMessage.ReceiverID, gatewayMessage.MessageType));
+                        break;
                 }
             }
         }

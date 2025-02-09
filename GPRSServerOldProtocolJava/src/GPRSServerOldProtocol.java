@@ -1,8 +1,6 @@
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.core.Logger;
@@ -13,6 +11,7 @@ import org.apache.mina.transport.socket.nio.NioSocketAcceptor;
 import org.bitbucket.rfnetwork.rfppf.common.*;
 import org.bitbucket.rfnetwork.rfppf.messages.MessageFactory;
 import org.bitbucket.rfnetwork.rfppf.messages.gprs.GPRSMessage;
+import org.bitbucket.rfnetwork.rfppf.messages.gprs.gateway.GatewayMessage;
 import org.bitbucket.rfnetwork.rfppf.messages.oldprotocol.*;
 import org.bitbucket.rfnetwork.rfppf.messages.oldprotocol.ReceiverMessage.MessageTypes;
 import org.bitbucket.rfnetwork.rfppf.parsers.GPRSParser;
@@ -141,23 +140,49 @@ public class GPRSServerOldProtocol extends IoHandlerAdapter implements IParser {
 			// GPRS parser
 			GPRSMessage receivedGPRSMessage = (GPRSMessage)msg;
 			ReceiverMessage rcvMessage = null;
+			GatewayMessage gatewayMessage = null;
+			
+			if ((receivedGPRSMessage != null) && ((receivedGPRSMessage.getGatewayMessage() == null) ||
+					(receivedGPRSMessage.getGatewayMessage() != null &&
+					receivedGPRSMessage.getGatewayMessage().getMessageType() != org.bitbucket.rfnetwork.rfppf.messages.gprs.gateway.GatewayMessage.MessageTypes.Acknowledge &&
+					receivedGPRSMessage.getGatewayMessage().getMessageType() != org.bitbucket.rfnetwork.rfppf.messages.gprs.gateway.GatewayMessage.MessageTypes.WhoIAm)))
+			{
+				// Because GPRS protocol requires acknowledgments. Send acknowledge message.
+	            GPRSMessage ack = GPRSMessage.GenerateGPRSAcknowledgeMessage(receivedGPRSMessage.getMessageNumber());
+	            SendToClient((IoSession)parser.GetInfo(), ack.GetBytes());
+			}
 			
 			// Handle received message
 			try {
-				rcvMessage = (ReceiverMessage)MessageFactory.ParseReceiverMessage(receivedGPRSMessage.getBody());
+				gatewayMessage = receivedGPRSMessage.getGatewayMessage();
+            	if (gatewayMessage == null) 
+            	{
+            		rcvMessage = (ReceiverMessage)MessageFactory.ParseReceiverMessage(receivedGPRSMessage.getBody());
+            	}
 			} catch (Exception ex)  {
 				rcvMessage = null;
 				logger.warn(String.format("Can't handle received message. %s", ex.getMessage()));
 			}
 			
-			if (rcvMessage != null && !(rcvMessage instanceof ReceiverAcknowledgeMessage)) {
-				// Because GPRS protocol requires acknowledgments. Send acknowledge message if not acknowledge.
-	            GPRSMessage ack = GPRSMessage.GenerateGPRSAcknowledgeMessage(receivedGPRSMessage.getMessageNumber());
-	            SendToClient((IoSession)parser.GetInfo(), ack.GetBytes());
-			}
 			// Update connection IMEI for sending commands out of parser
 			updateClientIMEI((IoSession)parser.GetInfo(), receivedGPRSMessage.getMainReceiverID());
             
+			if (gatewayMessage != null) {
+            	// Gateway message
+            	switch (gatewayMessage.getMessageType())
+            	{
+            	case Acknowledge:
+            		logger.info(String.format("Gateway (IMEI: %d) Acknowledge message: %s", receivedGPRSMessage.getMainReceiverID(), gatewayMessage.toString()));
+            		break;
+            	case WhoIAm:
+            		logger.info(String.format("Gateway (IMEI: %d) WhoIAm message: %s", receivedGPRSMessage.getMainReceiverID(), gatewayMessage.toString()));
+            		break;
+            	default:
+            		logger.info(String.format("GPRS Message # %d, IMEI: %ld, Address: %ld, Message type: %s", receivedGPRSMessage.getMessageNumber(), receivedGPRSMessage.getMainReceiverID(), receivedGPRSMessage.getReceiverID(), gatewayMessage.getMessageType().toString()));
+            		break;
+            	}
+            	return;
+            }
             // Handle received message			
 			// Print receiver details such as IMEI and Address
 			logger.info(String.format("GPRS Message # %d, IMEI: %d, Address: %d, Inner message type: %s", receivedGPRSMessage.getMessageNumber(), receivedGPRSMessage.getMainReceiverID(), receivedGPRSMessage.getReceiverID(), rcvMessage.getClass().toString()));

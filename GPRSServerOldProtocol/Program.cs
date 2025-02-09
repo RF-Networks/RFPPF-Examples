@@ -4,6 +4,7 @@ using Hik.Communication.Scs.Server;
 using RFPPF.Common;
 using RFPPF.Messages;
 using RFPPF.Messages.GPRS;
+using RFPPF.Messages.GPRS.Gateway;
 using RFPPF.Messages.OldProtocol;
 using RFPPF.Parsers;
 using System;
@@ -94,16 +95,49 @@ namespace GPRSServerOldProtocol
         {
             // Message was successfully parsed
             GPRSMessage receivedGPRSMessage = (e.Message as GPRSMessage);
-            // Because GPRS protocol requires acknowledgments. Send acknowledge message.
-            GPRSMessage ack = GPRSMessage.GenerateGPRSAcknowledgeMessage(receivedGPRSMessage.MessageNumber);
-            ((sender as GPRSParser).Info as IScsServerClient).SendMessage(new ScsRawDataMessage(ack.Bytes));
-
+            GatewayMessage gatewayMessage = receivedGPRSMessage.GatewayMessage;
+            if (receivedGPRSMessage != null && ((receivedGPRSMessage.GatewayMessage == null) ||
+                (receivedGPRSMessage.GatewayMessage != null
+                && receivedGPRSMessage.GatewayMessage.MessageType != GatewayMessage.MessageTypes.Acknowledge
+                && receivedGPRSMessage.GatewayMessage.MessageType != GatewayMessage.MessageTypes.WhoIAm)))
+            {
+                // Because GPRS protocol requires acknowledgments. Send acknowledge message.
+                GPRSMessage ack = GPRSMessage.GenerateGPRSAcknowledgeMessage(receivedGPRSMessage.MessageNumber);
+                ((sender as GPRSParser).Info as IScsServerClient).SendMessage(new ScsRawDataMessage(ack.Bytes));
+            }
             // Handle received message
-            ReceiverMessage rcvMessage = MessageFactory.ParseReceiverMessage(receivedGPRSMessage.Body) as ReceiverMessage;
+            ReceiverMessage rcvMessage = null;
+            try
+            {
+                rcvMessage = MessageFactory.ParseReceiverMessage(receivedGPRSMessage.Body) as ReceiverMessage;
+            }
+            catch
+            {
 
-            // Print receiver details such as IMEI and Address
-            Console.WriteLine(string.Format("GPRS Message # {0}, IMEI: {1}, Address: {2}, Inner message type: {3}", receivedGPRSMessage.MessageNumber, receivedGPRSMessage.MainReceiverID, receivedGPRSMessage.ReceiverID, rcvMessage.GetType().ToString()));
-
+            }
+            
+            if (gatewayMessage != null)
+            {
+                // Gateway messages
+                switch (gatewayMessage.MessageType)
+                {
+                    case GatewayMessage.MessageTypes.Acknowledge:
+                        Console.WriteLine(string.Format("Gateway (IMEI: {0}) Acknowledge message: {1}", receivedGPRSMessage.MainReceiverID, gatewayMessage.ToString()));
+                        break;
+                    case GatewayMessage.MessageTypes.WhoIAm:
+                        Console.WriteLine(string.Format("Gateway (IMEI: {0}) WhoIAm message: {1}", receivedGPRSMessage.MainReceiverID, gatewayMessage.ToString()));
+                        break;
+                    default:
+                        Console.WriteLine(string.Format("GPRS Message # {0}, IMEI: {1}, Address: {2}, Message type: {3}", receivedGPRSMessage.MessageNumber, receivedGPRSMessage.MainReceiverID, receivedGPRSMessage.ReceiverID, gatewayMessage.MessageType));
+                        break;
+                }
+                return;
+            }
+            else
+            {
+                // Print receiver details such as IMEI and Address
+                Console.WriteLine(string.Format("GPRS Message # {0}, IMEI: {1}, Address: {2}, Inner message type: {3}", receivedGPRSMessage.MessageNumber, receivedGPRSMessage.MainReceiverID, receivedGPRSMessage.ReceiverID, rcvMessage.GetType().ToString()));
+            }
             if (rcvMessage.MessageType == ReceiverMessage.MessageTypes.TagDataMessages)
             {
                 foreach (TagMessage tm in (rcvMessage as TagDataMessage).TagMessages)

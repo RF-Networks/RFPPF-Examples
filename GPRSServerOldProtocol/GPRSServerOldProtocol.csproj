@@ -50,10 +50,11 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <PropertyGroup>
-    <ManifestCertificateThumbprint>17D02FA308FDB66ED83770AD0779E219F829C94B</ManifestCertificateThumbprint>
+    <ManifestCertificateThumbprint>69A93595C39BAF0A8EB3C852E0A583D03BC98A46</ManifestCertificateThumbprint>
   </PropertyGroup>
   <PropertyGroup>
-    <ManifestKeyFile>GPRSServerOldProtocol_TemporaryKey.pfx</ManifestKeyFile>
+    <ManifestKeyFile>
+    </ManifestKeyFile>
   </PropertyGroup>
   <PropertyGroup>
     <GenerateManifests>true</GenerateManifests>
@@ -65,8 +66,8 @@
     <Reference Include="Crc, Version=1.0.3.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>packages\CrcDotNET.1.0.3\lib\net35\Crc.dll</HintPath>
     </Reference>
-    <Reference Include="RFPPF, Version=3.0.51.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>packages\RFPPF.3.0.51\lib\net46\RFPPF.dll</HintPath>
+    <Reference Include="RFPPF, Version=3.0.61.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>packages\RFPPF.3.0.61\lib\net46\RFPPF.dll</HintPath>
     </Reference>
     <Reference Include="Scs, Version=1.1.1.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>packages\Scs.1.1.1\lib\net40-client\Scs.dll</HintPath>
